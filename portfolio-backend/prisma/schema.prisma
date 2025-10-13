@@ -1,0 +1,167 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Owner/Admin model for authentication
+model Owner {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  bio       String?  @db.Text
+  phone     String?
+  picture   String?
+  role      Role     @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  blogs     Blog[]
+}
+
+// Blog model with rich text content support
+model Blog {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  content     String   @db.Text
+  excerpt     String?  @db.Text
+  thumbnail   String?
+  category    String
+  tags        String[]
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
+  views       Int      @default(0)
+  readTime    Int      @default(5) // in minutes
+  authorId    Int
+  author      Owner    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@index([isPublished])
+}
+
+// Project model for portfolio showcase
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  description String   @db.Text
+  thumbnail   String
+  images      String[] // Array of image URLs
+  liveUrl     String?
+  githubUrl   String?
+  technologies String[]
+  category    String
+  isFeatured  Boolean  @default(false)
+  status      ProjectStatus @default(COMPLETED)
+  startDate   DateTime?
+  endDate     DateTime?
+  features    String[] // Array of feature descriptions
+  challenges  String?  @db.Text
+  learnings   String?  @db.Text
+  order       Int      @default(0) // For custom ordering
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@index([isFeatured])
+}
+
+// Experience model for work history
+model Experience {
+  id          Int      @id @default(autoincrement())
+  company     String
+  position    String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean  @default(false)
+  description String   @db.Text
+  achievements String[] // Array of achievement descriptions
+  technologies String[]
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isCurrent])
+}
+
+// Education model
+model Education {
+  id          Int      @id @default(autoincrement())
+  institution String
+  degree      String
+  field       String
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean  @default(false)
+  description String?  @db.Text
+  achievements String[]
+  grade       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isCurrent])
+}
+
+// Skills model organized by category
+model Skill {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  category    SkillCategory
+  level       Int      @default(50) // 0-100 proficiency
+  icon        String?  // Icon name or URL
+  color       String?  // For UI theming
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+// Contact messages from visitors
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Enums
+enum Role {
+  OWNER
+  ADMIN
+}
+
+enum ProjectStatus {
+  COMPLETED
+  IN_PROGRESS
+  PLANNED
+}
+
+enum SkillCategory {
+  FRONTEND
+  BACKEND
+  DATABASE
+  TOOLS
+  DESIGN
+  OTHER
+}
