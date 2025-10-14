@@ -11,12 +11,10 @@ export const errorHandler = (
 ) => {
   let statusCode = 500;
   let message = 'Internal Server Error';
-  let isOperational = false;
 
   if (err instanceof ApiError) {
     statusCode = err.statusCode;
     message = err.message;
-    isOperational = err.isOperational;
   }
 
   console.error('Error:', {
