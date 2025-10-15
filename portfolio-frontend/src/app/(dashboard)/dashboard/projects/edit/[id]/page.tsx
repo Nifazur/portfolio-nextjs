@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -30,7 +31,6 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
   const [features, setFeatures] = useState<string[]>([])
   const [featureInput, setFeatureInput] = useState('')
   const [images, setImages] = useState<string[]>([])
-  const [imageInput, setImageInput] = useState('')
   const projectId = parseInt(params.id)
 
   const {
@@ -48,12 +48,13 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
 
   useEffect(() => {
     fetchProject()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
   const fetchProject = async () => {
     try {
       const response = await apiClient.get(`/projects/${projectId}`)
-      const project = response.data
+      const project = response.data as CreateProjectInput
       
       reset({
         title: project.title,

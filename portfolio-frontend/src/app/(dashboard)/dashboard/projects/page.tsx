@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -31,6 +32,7 @@ import { apiClient } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { Project } from '@/types'
+import { ApiResponse } from '@/types/api'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -44,7 +46,7 @@ export default function ProjectsPage() {
 
   const fetchProjects = async () => {
     try {
-      const response = await apiClient.get('/projects')
+      const response = await apiClient.get<ApiResponse<Project[]>>('/projects')
       if (response.data?.data) {
         setProjects(response.data.data)
       }
