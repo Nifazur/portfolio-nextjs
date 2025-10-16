@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -8,68 +7,126 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
-import { REVALIDATE_TIME } from '@/lib/constants'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
-export const revalidate = 60
+// ISR Configuration
+export const revalidate = 60 // Revalidate every 60 seconds
 
+// Pre-generate static params at build time
+export async function generateStaticParams() {
+  try {
+    console.log('🔨 Generating static blog params...')
+    
+    const res = await fetch(`${API_URL}/blogs?limit=100&isPublished=true`, {
+      // Cache this for 1 hour during build
+      next: { revalidate: 3600 },
+    })
+
+    if (!res.ok) {
+      console.warn(`⚠️ Failed to fetch blogs for static generation: ${res.status}`)
+      return [] // Fallback to on-demand ISR
+    }
+
+    const data = await res.json()
+    
+    // Safely access nested data structure
+    const blogs = data?.data?.data || []
+    
+    if (!Array.isArray(blogs)) {
+      console.warn('⚠️ Invalid blogs data structure')
+      return []
+    }
+
+    const params = blogs.map((blog: any) => ({
+      slug: String(blog.slug),
+    }))
+
+    console.log(`✅ Generated static params for ${params.length} blogs`)
+    return params
+  } catch (error) {
+    console.error('❌ Error generating static params:', error)
+    return [] // Fallback - pages will be generated on-demand
+  }
+}
+
+// Fetch blog data
 async function getBlog(slug: string) {
   try {
     const res = await fetch(`${API_URL}/blogs/slug/${slug}`, {
-      next: { revalidate: REVALIDATE_TIME }
+      next: { revalidate: 60 }, // ISR: Revalidate every 60 seconds
     })
-    if (!res.ok) return null
+
+    if (!res.ok) {
+      console.warn(`⚠️ Blog not found: ${slug}`)
+      return null
+    }
+
     const data = await res.json()
-    return data.data
+    return data?.data // Safely access data
   } catch (error) {
-    console.error('Failed to fetch blog:', error)
+    console.error(`❌ Error fetching blog ${slug}:`, error)
     return null
   }
 }
 
+// Fetch related blogs
 async function getRelatedBlogs(category: string, currentSlug: string) {
   try {
     const res = await fetch(
-      `${API_URL}/blogs?category=${category}&limit=3&isPublished=true`,
-      { next: { revalidate: REVALIDATE_TIME } }
+      `${API_URL}/blogs?category=${encodeURIComponent(category)}&limit=3&isPublished=true`,
+      { next: { revalidate: 60 } }
     )
+    
     if (!res.ok) return []
+    
     const data = await res.json()
-    return data.data.data.filter((blog: any) => blog.slug !== currentSlug)
+    const blogs = data?.data?.data || []
+    
+    return blogs.filter((blog: any) => blog.slug !== currentSlug)
   } catch (error) {
+    console.error('❌ Error fetching related blogs:', error)
     return []
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const res = await fetch(`${API_URL}/blogs?limit=100&isPublished=true`)
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.data.data.map((blog: any) => ({
-      slug: blog.slug,
-    }))
-  } catch (error) {
-    return []
-  }
-}
-
+// Generate metadata dynamically
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const blog = await getBlog(params.slug)
   
   if (!blog) {
     return {
       title: 'Blog Not Found',
+      description: 'The blog post you are looking for does not exist.',
     }
   }
 
   return {
-    title: blog.title,
-    description: blog.excerpt || blog.content.substring(0, 160),
+    title: `${blog.title} | My Portfolio`,
+    description: blog.excerpt || blog.content?.substring(0, 160) || 'Read my latest blog post',
+    keywords: blog.tags?.join(', ') || '',
+    authors: blog.author ? [{ name: blog.author.name }] : [],
     openGraph: {
       title: blog.title,
-      description: blog.excerpt || blog.content.substring(0, 160),
+      description: blog.excerpt || blog.content?.substring(0, 160),
+      type: 'article',
+      publishedTime: blog.createdAt,
+      authors: blog.author?.name ? [blog.author.name] : [],
+      images: blog.thumbnail 
+        ? [
+            {
+              url: blog.thumbnail,
+              width: 1200,
+              height: 630,
+              alt: blog.title,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: blog.title,
+      description: blog.excerpt || blog.content?.substring(0, 160),
       images: blog.thumbnail ? [blog.thumbnail] : [],
     },
   }
@@ -78,6 +135,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function BlogPage({ params }: { params: { slug: string } }) {
   const blog = await getBlog(params.slug)
 
+  // Show 404 if blog not found
   if (!blog) {
     notFound()
   }
@@ -201,7 +259,7 @@ export default async function BlogPage({ params }: { params: { slug: string } })
         )}
 
         {/* Related Blogs */}
-        {relatedBlogs.length > 0 && (
+        {relatedBlogs && relatedBlogs.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-6">Related Articles</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -213,7 +271,7 @@ export default async function BlogPage({ params }: { params: { slug: string } })
                       {relatedBlog.title}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {relatedBlog.excerpt}
+                      {relatedBlog.excerpt || relatedBlog.content?.substring(0, 100)}
                     </p>
                     <Button variant="ghost" size="sm" className="p-0 h-auto" asChild>
                       <Link href={`/blogs/${relatedBlog.slug}`}>

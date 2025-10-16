@@ -11,24 +11,36 @@ import { formatDate } from '@/lib/utils'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
-export const revalidate = 60 // ISR
+// ISR Configuration
+export const revalidate = 60 // Revalidate every 60 seconds
 
 async function getBlogs(page = 1, limit = 9) {
   try {
-    const res = await fetch(
-      `${API_URL}/blogs?page=${page}&limit=${limit}&isPublished=true&sortBy=createdAt&sortOrder=desc`,
-      { next: { revalidate } }
-    )
-    if (!res.ok) return { data: [], pagination: null }
-    const data = await res.json()
-    return data.data
+    const url = new URL(`${API_URL}/blogs`)
+    url.searchParams.set('page', page.toString())
+    url.searchParams.set('limit', limit.toString())
+    url.searchParams.set('isPublished', 'true')
+    url.searchParams.set('sortBy', 'createdAt')
+    url.searchParams.set('sortOrder', 'desc')
+
+    const res = await fetch(url.toString(), {
+      next: { revalidate: 60 }, // ISR revalidation
+    })
+
+    if (!res.ok) {
+      console.warn(`⚠️ Failed to fetch blogs: ${res.status}`)
+      return { data: [], pagination: null }
+    }
+
+    const response = await res.json()
+    return response?.data || { data: [], pagination: null }
   } catch (error) {
-    console.error('Failed to fetch blogs:', error)
+    console.error('❌ Error fetching blogs:', error)
     return { data: [], pagination: null }
   }
 }
 
-function BlogsLoading() {
+function BlogsLoadingSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {[...Array(6)].map((_, i) => (
@@ -73,20 +85,29 @@ export default async function BlogsPage({
         </div>
 
         {/* Blogs Grid */}
-        <Suspense fallback={<BlogsLoading />}>
+        <Suspense fallback={<BlogsLoadingSkeleton />}>
           {blogs.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
                 {blogs.map((blog: any) => (
-                  <Card key={blog.id} className="group overflow-hidden hover:shadow-lg transition-all duration-300">
+                  <Card 
+                    key={blog.id} 
+                    className="group overflow-hidden hover:shadow-lg transition-all duration-300"
+                  >
                     {/* Blog Image */}
-                    <div className="relative h-48 overflow-hidden">
-                      <Image
-                        src={blog.thumbnail || '/placeholder.jpg'}
-                        alt={blog.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                    <div className="relative h-48 overflow-hidden bg-muted">
+                      {blog.thumbnail ? (
+                        <Image
+                          src={blog.thumbnail}
+                          alt={blog.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          No image
+                        </div>
+                      )}
                       {blog.isFeatured && (
                         <div className="absolute top-3 left-3">
                           <Badge className="bg-primary">Featured</Badge>
@@ -101,14 +122,14 @@ export default async function BlogsPage({
 
                     <CardContent className="p-6">
                       {/* Meta Info */}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3 flex-wrap">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           <span>{formatDate(blog.createdAt)}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          <span>{blog.readTime} min read</span>
+                          <span>{blog.readTime} min</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Eye className="w-3 h-3" />
@@ -121,7 +142,7 @@ export default async function BlogsPage({
                       </h2>
 
                       <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                        {blog.excerpt || blog.content.substring(0, 150)}...
+                        {blog.excerpt || blog.content?.substring(0, 150)}...
                       </p>
 
                       {/* Tags */}
@@ -148,7 +169,7 @@ export default async function BlogsPage({
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-2 flex-wrap">
                   {page > 1 && (
                     <Button variant="outline" asChild>
                       <Link href={`/blogs?page=${page - 1}`}>Previous</Link>

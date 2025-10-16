@@ -1,38 +1,50 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Code, Palette, Smartphone, Globe, Database, Zap, GraduationCap } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { site } from '@/lib/constants'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
+// SSG: Fetch educations with caching
 async function getEducations() {
   try {
     const res = await fetch(`${API_URL}/educations`, {
-      cache: 'no-store'
+      // ✅ FIXED: Use default cache (revalidate daily)
+      next: { revalidate: 86400 } // Cache for 24 hours - SSG approach
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn('⚠️ Failed to fetch educations')
+      return []
+    }
     const data = await res.json()
     return data.data || []
   } catch (error) {
-    console.error('Failed to fetch educations:', error)
+    console.error('❌ Error fetching educations:', error)
     return []
   }
 }
 
+// SSG: Fetch experiences with caching
 async function getExperiences() {
   try {
     const res = await fetch(`${API_URL}/experiences`, {
-      cache: 'no-store'
+      // ✅ FIXED: Use default cache (revalidate daily)
+      next: { revalidate: 86400 } // Cache for 24 hours - SSG approach
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn('⚠️ Failed to fetch experiences')
+      return []
+    }
     const data = await res.json()
     return data.data || []
   } catch (error) {
-    console.error('Failed to fetch experiences:', error)
+    console.error('❌ Error fetching experiences:', error)
     return []
   }
 }
 
 export async function AboutSection() {
+  // Fetch both in parallel for better performance
   const [educations, experiences] = await Promise.all([
     getEducations(),
     getExperiences()
@@ -118,7 +130,7 @@ export async function AboutSection() {
                       </div>
                       <span className="text-muted-foreground text-sm">{skill.level}%</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-primary h-2 rounded-full transition-all duration-1000 ease-out"
                         style={{ width: `${skill.level}%` }}
@@ -130,6 +142,75 @@ export async function AboutSection() {
             </div>
           </div>
         </div>
+
+        {/* Experience Timeline */}
+        {experiences.length > 0 && (
+          <div id="experience" className="space-y-8 mb-20">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-foreground mb-4">
+                Work Experience
+              </h3>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                My professional journey and the companies I&apos;ve worked with.
+              </p>
+            </div>
+
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-4 md:left-1/2 transform md:-translate-x-px top-0 bottom-0 w-0.5 bg-border"></div>
+
+              <div className="space-y-12">
+                {experiences.map((exp: any, index: number) => (
+                  <div key={exp.id} className="relative">
+                    {/* Timeline dot */}
+                    <div className="absolute left-2 md:left-1/2 transform md:-translate-x-1/2 w-4 h-4 bg-primary rounded-full border-4 border-background"></div>
+                    
+                    <div className={`ml-12 md:ml-0 md:w-1/2 ${index % 2 === 0 ? 'md:pr-12' : 'md:ml-auto md:pl-12'}`}>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-primary text-sm font-medium">
+                              {new Date(exp.startDate).getFullYear()} - {exp.endDate ? new Date(exp.endDate).getFullYear() : 'Present'}
+                            </span>
+                            {exp.isCurrent && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Current</span>
+                            )}
+                          </div>
+                          <h4 className="text-lg font-bold text-foreground mb-1">{exp.position}</h4>
+                          <p className="text-primary font-medium mb-3">{exp.company}</p>
+                          {exp.location && (
+                            <p className="text-sm text-muted-foreground mb-2">{exp.location}</p>
+                          )}
+                          {exp.description && (
+                            <p className="text-muted-foreground text-sm leading-relaxed mb-3">
+                              {exp.description}
+                            </p>
+                          )}
+                          {exp.achievements && exp.achievements.length > 0 && (
+                            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                              {exp.achievements.slice(0, 3).map((achievement: string, i: number) => (
+                                <li key={i}>{achievement}</li>
+                              ))}
+                            </ul>
+                          )}
+                          {exp.technologies && exp.technologies.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {exp.technologies.slice(0, 5).map((tech: string, i: number) => (
+                                <span key={i} className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Education Timeline */}
         {educations.length > 0 && (
@@ -144,11 +225,13 @@ export async function AboutSection() {
             </div>
 
             <div className="relative">
+              {/* Timeline line */}
               <div className="absolute left-4 md:left-1/2 transform md:-translate-x-px top-0 bottom-0 w-0.5 bg-border"></div>
 
               <div className="space-y-12">
                 {educations.map((edu: any, index: number) => (
                   <div key={edu.id} className="relative">
+                    {/* Timeline dot */}
                     <div className="absolute left-2 md:left-1/2 transform md:-translate-x-1/2 w-4 h-4 bg-primary rounded-full border-4 border-background"></div>
                     
                     <div className={`ml-12 md:ml-0 md:w-1/2 ${index % 2 === 0 ? 'md:pr-12' : 'md:ml-auto md:pl-12'}`}>
@@ -162,10 +245,21 @@ export async function AboutSection() {
                           </div>
                           <h4 className="text-lg font-bold text-foreground mb-1">{edu.degree}</h4>
                           <p className="text-primary font-medium mb-3">{edu.institution}</p>
+                          <p className="text-sm text-muted-foreground mb-2">{edu.field}</p>
                           {edu.description && (
-                            <p className="text-muted-foreground text-sm leading-relaxed">
+                            <p className="text-muted-foreground text-sm leading-relaxed mb-3">
                               {edu.description}
                             </p>
+                          )}
+                          {edu.grade && (
+                            <p className="text-sm text-muted-foreground mb-2">Grade: {edu.grade}</p>
+                          )}
+                          {edu.achievements && edu.achievements.length > 0 && (
+                            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                              {edu.achievements.slice(0, 3).map((achievement: string, i: number) => (
+                                <li key={i}>{achievement}</li>
+                              ))}
+                            </ul>
                           )}
                         </CardContent>
                       </Card>

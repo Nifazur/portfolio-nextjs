@@ -8,7 +8,6 @@ import { ArrowLeft, Save, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
@@ -18,12 +17,23 @@ import { createBlogAction } from '@/actions/blog'
 import { BLOG_CATEGORIES } from '@/lib/constants'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+
+// Dynamic import for TipTap (client-side only)
+const DynamicEditor = dynamic(() => 
+  import('@/components/editor/TipTapEditor').then(mod => ({ default: mod.TipTapEditor })),
+  { 
+    ssr: false,
+    loading: () => <div className="h-80 bg-muted rounded-md flex items-center justify-center text-muted-foreground">Loading editor...</div>
+  }
+)
 
 export default function CreateBlogPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+  const [content, setContent] = useState('')
 
   const {
     register,
@@ -48,8 +58,8 @@ export default function CreateBlogPage() {
   const watchedValues = watch()
 
   const onSubmit = async (data: CreateBlogInput) => {
-    // Validate content length
-    if (!data.content || data.content.length < 50) {
+    // Validate content
+    if (!content || content.length < 50) {
       toast.error('Content must be at least 50 characters')
       return
     }
@@ -58,6 +68,7 @@ export default function CreateBlogPage() {
     try {
       const result = await createBlogAction({
         ...data,
+        content, // Use rich editor content
         tags
       })
 
@@ -103,7 +114,7 @@ export default function CreateBlogPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Create Blog</h1>
           <p className="text-muted-foreground">
-            Write a new blog post
+            Write a new blog post with rich formatting
           </p>
         </div>
       </div>
@@ -130,10 +141,9 @@ export default function CreateBlogPage() {
 
             <div className="space-y-2">
               <Label htmlFor="excerpt">Excerpt</Label>
-              <Textarea
+              <Input
                 id="excerpt"
                 placeholder="Brief description of the blog"
-                rows={3}
                 {...register('excerpt')}
                 className={errors.excerpt ? 'border-destructive' : ''}
               />
@@ -221,27 +231,29 @@ export default function CreateBlogPage() {
           </CardContent>
         </Card>
 
-        {/* Content Editor */}
+        {/* Rich Text Editor */}
         <Card>
           <CardHeader>
             <CardTitle>Content *</CardTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Write your blog content with rich formatting options
+            </p>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Textarea
-              placeholder="Write your blog content here... (You can use HTML tags for formatting)"
-              {...register('content')}
-              rows={20}
-              className={`font-mono text-sm ${errors.content ? 'border-destructive' : ''}`}
+          <CardContent>
+            <DynamicEditor
+              value={content}
+              onChangeAction={setContent}
+              placeholder="Start writing your blog post..."
             />
-            {errors.content && (
-              <p className="text-xs text-destructive">{errors.content.message}</p>
+            {!content && errors.content && (
+              <p className="text-xs text-destructive mt-2">{errors.content.message}</p>
             )}
-            <div className="flex justify-between">
+            <div className="flex justify-between mt-2">
               <p className="text-xs text-muted-foreground">
-                Tip: You can use HTML tags like &lt;h2&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;a&gt;, etc.
+                {content ? `${content.replace(/<[^>]*>/g, '').length} characters` : '0 characters'}
               </p>
-              <p className={`text-xs ${(watchedValues.content?.length || 0) < 50 && (watchedValues.content?.length || 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                {watchedValues.content?.length || 0} characters (min: 50)
+              <p className={`text-xs ${content && content.length < 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                Minimum: 50 characters
               </p>
             </div>
           </CardContent>
