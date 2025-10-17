@@ -2,11 +2,12 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Calendar, Clock, Eye, User, ArrowLeft, Tag } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Calendar, Clock, Eye, User, Tag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
+import { BackButton } from '@/components/blog/BackButton'
+import { Button } from '@/components/ui/button'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
@@ -146,12 +147,7 @@ export default async function BlogPage({ params }: { params: { slug: string } })
     <article className="pt-24 pb-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
-        <Button variant="ghost" className="mb-8" asChild>
-          <Link href="/blogs">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Blogs
-          </Link>
-        </Button>
+        <BackButton />
 
         {/* Blog Header */}
         <header className="mb-8">

@@ -49,7 +49,7 @@ export function TipTapEditor({ value, onChangeAction, placeholder }: TipTapEdito
       }),
     ],
     content: value,
-    immediatelyRender: false, // ✅ ADD THIS LINE
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChangeAction(editor.getHTML())
     },
