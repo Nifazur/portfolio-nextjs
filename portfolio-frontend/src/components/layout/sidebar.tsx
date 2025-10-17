@@ -8,14 +8,12 @@ import {
   FileText,
   FolderOpen,
   User,
-  Settings,
   LogOut,
   Menu,
   X,
   ChevronLeft,
   MessageSquare
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/actions/auth'
 import toast from 'react-hot-toast'
@@ -46,11 +44,6 @@ const sidebarItems = [
     title: 'Profile',
     href: '/dashboard/profile',
     icon: User
-  },
-  {
-    title: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings
   }
 ]
 

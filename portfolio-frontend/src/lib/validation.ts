@@ -87,4 +87,4 @@ export type LoginInput = z.infer<typeof loginSchema>
 export type CreateBlogInput = z.input<typeof createBlogSchema>
 export type CreateProjectInput = z.input<typeof createProjectSchema>
 export type ContactInput = z.infer<typeof contactSchema>
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+export type ChangePasswordInput = z.input<typeof changePasswordSchema>

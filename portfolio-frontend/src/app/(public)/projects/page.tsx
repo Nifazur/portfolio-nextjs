@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Filter, Search, ExternalLink, Github } from 'lucide-react'
+import { Filter, Search, ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,25 +17,31 @@ import {
 } from '@/components/ui/select'
 import { apiClient } from '@/lib/api'
 import { Project } from '@/types'
+import { PROJECT_CATEGORIES } from '@/lib/constants'
 
+const ITEMS_PER_PAGE = 9
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
-  const [categories, setCategories] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'newest' | 'featured'>('newest')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     fetchProjects()
-    fetchCategories()
   }, [])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedCategory, sortBy])
 
   const fetchProjects = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get<{ data: Project[] }>('/projects?limit=50')
+      const response = await apiClient.get<{ data: Project[] }>('/projects?limit=100')
       if (Array.isArray(response.data?.data)) {
         setProjects(response.data.data)
       } else if (Array.isArray(response.data)) {
@@ -48,16 +54,7 @@ export default function ProjectsPage() {
     }
   }
 
-  const fetchCategories = async () => {
-    try {
-      const response = await apiClient.get<{ data: { name: string }[] }>('/projects/categories')
-      const categoryNames = response.data?.data?.map((cat) => cat.name) || []
-      setCategories(categoryNames)
-    } catch (error) {
-      console.error('Failed to fetch categories:', error)
-    }
-  }
-
+  // Filter and sort projects
   const filteredProjects = projects
     .filter(project => {
       const matchesSearch = 
@@ -75,6 +72,66 @@ export default function ProjectsPage() {
       }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const currentProjects = filteredProjects.slice(startIndex, endIndex)
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const goToPrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1)
+    }
+  }
+
+  const goToNext = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1)
+    }
+  }
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    const maxVisible = 5
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1)
+        pages.push('...')
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        pages.push(1)
+        pages.push('...')
+        pages.push(currentPage - 1)
+        pages.push(currentPage)
+        pages.push(currentPage + 1)
+        pages.push('...')
+        pages.push(totalPages)
+      }
+    }
+
+    return pages
+  }
 
   if (loading) {
     return (
@@ -119,7 +176,7 @@ export default function ProjectsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
+                {PROJECT_CATEGORIES.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
@@ -138,12 +195,58 @@ export default function ProjectsPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Active Filters Info */}
+          {(searchTerm || selectedCategory !== 'all') && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
+              {searchTerm && (
+                <Badge variant="secondary" className="gap-1">
+                  Search: {searchTerm}
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {selectedCategory !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Category: {selectedCategory}
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedCategory('all')
+                }}
+                className="h-6 text-xs"
+              >
+                Clear All
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Results Summary */}
+        <div className="mb-6 text-sm text-muted-foreground">
+          Showing {startIndex + 1}-{Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
+          {filteredProjects.length !== projects.length && ` (filtered from ${projects.length} total)`}
         </div>
 
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {filteredProjects.length > 0 ? (
-            filteredProjects.map((project) => (
+          {currentProjects.length > 0 ? (
+            currentProjects.map((project) => (
               <Card 
                 key={project.id}
                 className="group overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col"
@@ -186,7 +289,7 @@ export default function ProjectsPage() {
                 <CardContent className="p-6 flex-1 flex flex-col">
                   <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">
                     {project.title}
-                    </h3>
+                  </h3>
 
                   <p className="text-muted-foreground text-sm mb-4 line-clamp-3 flex-1">
                     {project.description}
@@ -271,10 +374,61 @@ export default function ProjectsPage() {
           )}
         </div>
 
-        {/* Results count */}
-        <div className="text-center text-sm text-muted-foreground mb-8">
-          Showing {filteredProjects.length} of {projects.length} projects
-        </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2">
+              {/* Previous Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPrevious}
+                disabled={currentPage === 1}
+                className="gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((page, index) => (
+                  <div key={index}>
+                    {page === '...' ? (
+                      <span className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => goToPage(page as number)}
+                        className="min-w-[40px]"
+                      >
+                        {page}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Next Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNext}
+                disabled={currentPage === totalPages}
+                className="gap-1"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Page Info */}
+            <p className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

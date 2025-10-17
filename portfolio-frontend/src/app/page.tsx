@@ -6,6 +6,7 @@ import { ProjectsSection } from '@/components/sections/projects'
 import { ContactSection } from '@/components/sections/contact'
 import { Navbar } from '@/components/layout/navbar'
 import { Footer } from '@/components/layout/footer'
+import { BlogSection } from '@/components/sections/blog'
 
 export const metadata: Metadata = {
   title: 'Nifazur Rahman - Full Stack Developer Portfolio',
@@ -56,8 +57,9 @@ export default function HomePage() {
       <main className="min-h-screen">
         <HeroSection />
         <AboutSection />
-        <SkillsSection />
+        <SkillsSection/>
         <ProjectsSection />
+        <BlogSection/>
         <ContactSection />
       </main>
       <Footer />

@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { User, Lock, Mail, Phone, Edit, Save, X } from 'lucide-react'
+import { Lock, Mail, Phone, Edit, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +17,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { apiClient } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { ApiResponse } from '@/types'
+import { ApiResponse, User } from '@/types'
+// Local ChangePasswordInput interface
+interface ChangePasswordInput {
+  oldPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+import { changePasswordSchema } from '@/lib/validation'
 
 // Validation Schemas
 const updateProfileSchema = z.object({
@@ -27,37 +34,12 @@ const updateProfileSchema = z.object({
     picture: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 })
 
-const changePasswordSchema = z.object({
-    oldPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z.string()
-        .min(8, 'Password must be at least 8 characters')
-        .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-        .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-        .regex(/[0-9]/, 'Must contain at least one number')
-        .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Must contain at least one special character'),
-    confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-})
 
 type UpdateProfileInput = z.infer<typeof updateProfileSchema>
-type ChangePasswordInput = z.infer<typeof changePasswordSchema>
 
-interface ProfileData {
-    id: number
-    name: string
-    email: string
-    bio: string | null
-    phone: string | null
-    picture: string | null
-    role: string
-    createdAt: string
-    updatedAt: string
-}
 
 export default function ProfilePage() {
-    const [profile, setProfile] = useState<ProfileData | null>(null)
+    const [profile, setProfile] = useState< User | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
     const [isUpdating, setIsUpdating] = useState(false)
@@ -93,10 +75,10 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
         try {
             setIsLoading(true)
-            const response = await apiClient.get<ApiResponse<ProfileData>>('/auth/profile')
+            const response = await apiClient.get<User>('/auth/profile')
 
-            if (response.data.success) {
-                const user = response.data.data
+            if (response.success) {
+                const user = response.data
                 setProfile(user)
                 resetProfile({
                     name: user.name,
@@ -119,7 +101,7 @@ export default function ProfilePage() {
             const response = await apiClient.patch('/auth/profile', data)
 
             if (response.success) {
-                setProfile(response.data as ProfileData)
+                setProfile(response.data as User)
                 setIsEditing(false)
                 toast.success('Profile updated successfully!')
             } else {
@@ -151,7 +133,7 @@ export default function ProfilePage() {
             }
         } catch (error: any) {
             console.error('Change Password Error:', error)
-            toast.error(error.response?.data?.message || 'An error occurred')
+            toast.error(error.message || 'An error occurred')
         } finally {
             setIsChangingPassword(false)
         }
@@ -428,7 +410,7 @@ export default function ProfilePage() {
                                             id="confirmPassword"
                                             type="password"
                                             placeholder="Confirm new password"
-                                            {...registerPassword('confirmPassword')}
+                                            {...registerPassword('confirmPassword' as const)}
                                             className={passwordErrors.confirmPassword ? 'border-destructive' : ''}
                                         />
                                         {passwordErrors.confirmPassword && (

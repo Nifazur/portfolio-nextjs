@@ -1,15 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Mail, Phone, Send, MessageCircle, MapPin } from 'lucide-react'
+import { Mail, Phone, Send, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { contactSchema, type ContactInput } from '@/lib/validation'
 import { sendContactMessageAction } from '@/actions/contact'
 import toast from 'react-hot-toast'
@@ -64,7 +64,7 @@ export function ContactSection() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Contact Form */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className='min-h-[583px]'>
               <CardContent className="p-8">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -115,7 +115,7 @@ export function ContactSection() {
                       placeholder="Tell me about your project..."
                       rows={6}
                       {...register('message')}
-                      className={errors.message ? 'border-destructive' : ''}
+                      className={`h-40 resize-none ${errors.message ? 'border-destructive' : ''}`}
                     />
                     {errors.message && (
                       <p className="text-xs text-destructive">{errors.message.message}</p>
@@ -186,20 +186,6 @@ export function ContactSection() {
               </CardContent>
             </Card>
 
-            {/* Location */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-muted-foreground text-sm mb-1">Location</h3>
-                    <p className="text-foreground font-medium">{site.location}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Availability */}
             <Card>
