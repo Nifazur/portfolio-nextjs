@@ -181,7 +181,6 @@ export function Navbar() {
                     : "text-muted-foreground"
                 )}
               >
-                <LayoutDashboard className="w-4 h-4" />
                 Dashboard
                 {pathname.startsWith('/dashboard') && (
                   <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />

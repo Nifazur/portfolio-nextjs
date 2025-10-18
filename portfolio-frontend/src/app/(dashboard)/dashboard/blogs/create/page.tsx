@@ -19,7 +19,6 @@ import toast from 'react-hot-toast'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
-// Dynamic import for TipTap (client-side only)
 const DynamicEditor = dynamic(() => 
   import('@/components/editor/TipTapEditor').then(mod => ({ default: mod.TipTapEditor })),
   { 
@@ -58,8 +57,9 @@ export default function CreateBlogPage() {
   const watchedValues = watch()
 
   const onSubmit = async (data: CreateBlogInput) => {
-    // Validate content
-    if (!content || content.length < 50) {
+    const textContent = content.replace(/<[^>]*>/g, '').trim()
+    
+    if (!textContent || textContent.length < 50) {
       toast.error('Content must be at least 50 characters')
       return
     }
@@ -68,7 +68,7 @@ export default function CreateBlogPage() {
     try {
       const result = await createBlogAction({
         ...data,
-        content, // Use rich editor content
+        content,
         tags
       })
 
@@ -103,7 +103,6 @@ export default function CreateBlogPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard/blogs">
@@ -120,7 +119,6 @@ export default function CreateBlogPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Info */}
         <Card>
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
@@ -191,7 +189,6 @@ export default function CreateBlogPage() {
           </CardContent>
         </Card>
 
-        {/* Tags */}
         <Card>
           <CardHeader>
             <CardTitle>Tags</CardTitle>
@@ -231,7 +228,6 @@ export default function CreateBlogPage() {
           </CardContent>
         </Card>
 
-        {/* Rich Text Editor */}
         <Card>
           <CardHeader>
             <CardTitle>Content *</CardTitle>
@@ -242,24 +238,23 @@ export default function CreateBlogPage() {
           <CardContent>
             <DynamicEditor
               value={content}
-              onChangeAction={setContent}
+              onChangeAction={(newContent) => {
+                setContent(newContent)
+                setValue('content', newContent)
+              }}
               placeholder="Start writing your blog post..."
             />
-            {!content && errors.content && (
-              <p className="text-xs text-destructive mt-2">{errors.content.message}</p>
-            )}
             <div className="flex justify-between mt-2">
               <p className="text-xs text-muted-foreground">
                 {content ? `${content.replace(/<[^>]*>/g, '').length} characters` : '0 characters'}
               </p>
-              <p className={`text-xs ${content && content.length < 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              <p className={`text-xs ${content.replace(/<[^>]*>/g, '').length < 50 ? 'text-destructive' : 'text-muted-foreground'}`}>
                 Minimum: 50 characters
               </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Publishing Options */}
         <Card>
           <CardHeader>
             <CardTitle>Publishing Options</CardTitle>
@@ -295,7 +290,6 @@ export default function CreateBlogPage() {
           </CardContent>
         </Card>
 
-        {/* Actions */}
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" asChild>
             <Link href="/dashboard/blogs">Cancel</Link>
