@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// src/app/(dashboard)/dashboard/DashboardClient.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, FolderOpen, MessageSquare, Eye, Clock, Mail, User } from 'lucide-react'
 import Link from 'next/link'
@@ -30,43 +31,53 @@ export default function DashboardClient({
 }) {
   const [data, setData] = useState(initialData)
   const [loading, setLoading] = useState(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Real-time polling every 30 seconds
+  const fetchUpdates = async () => {
+    try {
+      setLoading(true)
+      const headers = { Authorization: `Bearer ${token}` }
+      
+      const [statsRes, blogsRes, messagesRes] = await Promise.all([
+        fetch(`${API_URL}/contact/stats`, { headers }),
+        fetch(`${API_URL}/blogs?limit=5&sortBy=createdAt&sortOrder=desc`, { headers }),
+        fetch(`${API_URL}/contact?limit=5&sortBy=createdAt&sortOrder=desc`, { headers })
+      ])
+
+      const [stats, blogs, messages] = await Promise.all([
+        statsRes.ok ? statsRes.json() : { data: null },
+        blogsRes.ok ? blogsRes.json() : { data: null },
+        messagesRes.ok ? messagesRes.json() : { data: null }
+      ])
+
+      setData(prev => ({
+        stats: {
+          ...prev.stats,
+          messages: stats?.data || prev.stats.messages
+        },
+        recentBlogs: Array.isArray(blogs?.data?.data) ? blogs.data.data.slice(0, 5) : 
+                     Array.isArray(blogs?.data) ? blogs.data.slice(0, 5) : prev.recentBlogs,
+        recentMessages: Array.isArray(messages?.data?.data) ? messages.data.data.slice(0, 5) : 
+                        Array.isArray(messages?.data) ? messages.data.slice(0, 5) : prev.recentMessages
+      }))
+    } catch (error) {
+      console.error('Failed to fetch updates:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    const fetchUpdates = async () => {
-      try {
-        setLoading(true)
-        const headers = { Authorization: `Bearer ${token}` }
-        
-        const [statsRes, blogsRes, messagesRes] = await Promise.all([
-          fetch(`${API_URL}/contact/stats`, { headers }),
-          fetch(`${API_URL}/blogs?limit=5&sort=-createdAt`, { headers }),
-          fetch(`${API_URL}/contact?limit=5&sort=-createdAt`, { headers })
-        ])
+    // Set up interval for polling
+    intervalRef.current = setInterval(fetchUpdates, 30000)
 
-        const [stats, blogs, messages] = await Promise.all([
-          statsRes.ok ? statsRes.json() : null,
-          blogsRes.ok ? blogsRes.json() : null,
-          messagesRes.ok ? messagesRes.json() : null
-        ])
-
-        setData(prev => ({
-          stats: {
-            ...prev.stats,
-            messages: stats?.data || prev.stats.messages
-          },
-          recentBlogs: Array.isArray(blogs?.data) ? blogs.data.slice(0, 5) : prev.recentBlogs,
-          recentMessages: Array.isArray(messages?.data) ? messages.data.slice(0, 5) : prev.recentMessages
-        }))
-      } catch (error) {
-        console.error('Failed to fetch updates:', error)
-      } finally {
-        setLoading(false)
+    // Cleanup on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
       }
     }
-
-    const interval = setInterval(fetchUpdates, 30000) // 30 seconds
-    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
   const statsCards = [

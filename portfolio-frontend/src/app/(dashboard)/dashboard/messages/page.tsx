@@ -31,7 +31,12 @@ export default function MessagesPage() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all')
 
   useEffect(() => {
-    fetchMessages()
+    let isMounted = true
+    const load = async () => {
+      await fetchMessages()
+    }
+    if (isMounted) load()
+    return () => { isMounted = false }
   }, [])
 
   const fetchMessages = async () => {
