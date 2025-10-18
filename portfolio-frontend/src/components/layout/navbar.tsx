@@ -3,33 +3,104 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { site } from '@/lib/constants'
+import Cookies from 'js-cookie'
 
 const navItems = [
-  { name: 'Home', href: '/' },
-  { name: 'About', href: '/#about' },
-  { name: 'Projects', href: '/#projects' },
-  { name: 'Skills', href: '/#skills' },
-  { name: 'Blogs', href: '/#blog' },
-  { name: 'Contact', href: '/#contact' },
+  { name: 'Home', href: '/#hero', section: 'hero' },
+  { name: 'About', href: '/#about', section: 'about' },
+  { name: 'Skills', href: '/#skills', section: 'skills' },
+  { name: 'Projects', href: '/#projects', section: 'projects' },
+  { name: 'Blogs', href: '/#blog', section: 'blog' },
+  { name: 'Contact', href: '/#contact', section: 'contact' },
 ]
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('hero')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const pathname = usePathname()
 
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = Cookies.get('token')
+      setIsAuthenticated(!!token)
+    }
+    
+    checkAuth()
+    
+    // Check periodically for auth changes
+    const interval = setInterval(checkAuth, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Handle scroll detection
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0)
+
+      // Only track sections on homepage
+      if (pathname === '/') {
+        const sections = navItems.map(item => item.section)
+        
+        for (const section of sections) {
+          const element = document.getElementById(section)
+          if (element) {
+            const rect = element.getBoundingClientRect()
+            // Check if section is in viewport (with offset for navbar)
+            if (rect.top <= 100 && rect.bottom >= 100) {
+              setActiveSection(section)
+              break
+            }
+          }
+        }
+      }
     }
 
     window.addEventListener('scroll', handleScroll)
+    handleScroll() // Initial check
+
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [pathname])
+
+  // Determine if a nav item is active
+  const isActive = (item: typeof navItems[0]) => {
+    // For non-homepage routes
+    if (pathname !== '/') {
+      return pathname === item.href
+    }
+    
+    // For homepage, check active section
+    return activeSection === item.section
+  }
+
+  // Handle navigation click
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, section: string) => {
+    setIsMenuOpen(false)
+    
+    // If already on homepage, smooth scroll to section
+    if (pathname === '/' && href.startsWith('/#')) {
+      e.preventDefault()
+      const element = document.getElementById(section)
+      if (element) {
+        const offset = 80 // Navbar height
+        const elementPosition = element.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.pageYOffset - offset
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        })
+        
+        setActiveSection(section)
+      }
+    }
+  }
 
   return (
     <nav className={cn(
@@ -39,7 +110,16 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link 
+            href="/" 
+            className="flex items-center"
+            onClick={() => {
+              if (pathname === '/') {
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+                setActiveSection('hero')
+              }
+            }}
+          >
             <span className="text-2xl font-bold text-foreground">
               {site.brand}<span className="text-primary">.</span>
             </span>
@@ -51,19 +131,42 @@ export function Navbar() {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href, item.section)}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary",
-                  pathname === item.href
+                  "text-sm font-medium transition-colors hover:text-primary relative",
+                  isActive(item)
                     ? "text-primary"
                     : "text-muted-foreground"
                 )}
               >
                 {item.name}
+                {isActive(item) && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
               </Link>
             ))}
+            
+            {/* Dashboard Link - Only show when authenticated */}
+            {isAuthenticated && (
+              <Link
+                href="/dashboard"
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary flex items-center gap-1.5 relative",
+                  pathname.startsWith('/dashboard')
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                )}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+                {pathname.startsWith('/dashboard') && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+              </Link>
+            )}
           </div>
 
-          {/* Hire Me Button */}
+          {/* Hire Me Button - Desktop */}
           <div className="hidden md:block">
             <Button asChild>
               <a href={`mailto:${site.email}`}>Hire Me</a>
@@ -88,17 +191,35 @@ export function Navbar() {
               <Link
                 key={item.name}
                 href={item.href}
-                onClick={() => setIsMenuOpen(false)}
+                onClick={(e) => handleNavClick(e, item.href, item.section)}
                 className={cn(
-                  "block px-3 py-2 text-base font-medium transition-colors hover:text-primary",
-                  pathname === item.href
-                    ? "text-primary"
+                  "block px-3 py-2 text-base font-medium transition-colors hover:text-primary rounded-md",
+                  isActive(item)
+                    ? "text-primary bg-primary/10"
                     : "text-muted-foreground"
                 )}
               >
                 {item.name}
               </Link>
             ))}
+            
+            {/* Dashboard Link - Mobile - Only show when authenticated */}
+            {isAuthenticated && (
+              <Link
+                href="/dashboard"
+                onClick={() => setIsMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-base font-medium transition-colors hover:text-primary rounded-md",
+                  pathname.startsWith('/dashboard')
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground"
+                )}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+            )}
+            
             <div className="px-3 py-2">
               <Button className="w-full" asChild>
                 <a href={`mailto:${site.email}`}>Hire Me</a>

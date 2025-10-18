@@ -415,3 +415,9 @@
     scroll-behavior: auto !important;
   }
 }
+@media (display-mode: standalone) {
+  body {
+    padding-env: safe-area-inset-left safe-area-inset-right 
+      safe-area-inset-top safe-area-inset-bottom;
+  }
+}

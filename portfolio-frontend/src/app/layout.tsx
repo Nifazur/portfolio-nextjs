@@ -16,6 +16,18 @@ export const metadata: Metadata = {
     description: 'Full-stack developer portfolio',
     type: 'website',
   },
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Nifazur Rahman',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  verification: {
+    google: 'AX4B6Y1M1d_cunSJQJQnFFIX2RGygLjHiOjtnt90ufM',
+  },
 }
 
 export default function RootLayout({
@@ -28,7 +40,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider defaultTheme="dark">
           {children}
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,
