@@ -1,8 +1,11 @@
+export const dynamic = 'force-static' 
+export const revalidate = 3600
+
 import { Blog, Project } from '@/types'
 import { MetadataRoute } from 'next'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourportfolio.com'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://portfolio-backend-smoky-five.vercel.app/api/v1'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://nifazur.vercel.app'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static routes
