@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, LoginResponse } from '@/types'
+import { User } from '@/types'
 import { apiClient } from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -26,17 +26,11 @@ export function useAuth() {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }))
       
-      const token = apiClient.getToken()
-      if (!token) {
-        setState({ user: null, loading: false, error: null })
-        return
-      }
-
+      // httpOnly cookies are automatically sent with this request
       const response = await apiClient.get<User>('/auth/profile')
       setState({ user: response.data, loading: false, error: null })
     } catch (error: any) {
       setState({ user: null, loading: false, error: error.message })
-      apiClient.clearToken()
     }
   }, [])
 
@@ -44,11 +38,12 @@ export function useAuth() {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }))
 
-      const response = await apiClient.post<LoginResponse>('/auth/login', { email, password })
+      // Login will set httpOnly cookies automatically via server action
+      const response = await apiClient.post('/auth/login', { email, password })
 
-      if (response.data?.accessToken) {
-        apiClient.setToken(response.data.accessToken)
-        setState({ user: response.data.user, loading: false, error: null })
+      if (response.data) {
+        // Fetch user profile after successful login
+        await checkAuth()
         toast.success('Login successful!')
         router.push('/dashboard')
         return true
@@ -59,15 +54,15 @@ export function useAuth() {
       toast.error(error.message || 'Login failed')
       return false
     }
-  }, [router])
+  }, [router, checkAuth])
 
   const logout = useCallback(async () => {
     try {
+      // Call logout endpoint to clear httpOnly cookies
       await apiClient.post('/auth/logout')
     } catch (error) {
       // Ignore logout errors
     } finally {
-      apiClient.clearToken()
       setState({ user: null, loading: false, error: null })
       router.push('/login')
       toast.success('Logged out successfully')

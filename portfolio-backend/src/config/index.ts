@@ -14,11 +14,21 @@ export const config = {
   },
   
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://nifazur.vercel.app'
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie'],
   },
   
   database: {
     url: process.env.DATABASE_URL,
   },
+  
+  // Frontend URL for cookie domain
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 };

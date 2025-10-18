@@ -17,7 +17,25 @@ import { contactRouter } from './modules/contact/contact.routes';
 const app = express();
 
 // ==================== MIDDLEWARE ====================
-app.use(cors(config.cors));
+
+// Enhanced CORS setup — supports multiple origins
+const allowedOrigins = config.cors.origin
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true) // Allow tools like Postman
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(`🚫 CORS blocked request from: ${origin}`)
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
+    credentials: true,
+  })
+)
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

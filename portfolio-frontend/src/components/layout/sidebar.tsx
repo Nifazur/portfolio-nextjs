@@ -52,14 +52,33 @@ export function Sidebar() {
   const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
-    const result = await logoutAction()
-    if (result.success) {
+    if (isLoggingOut) return
+    
+    setIsLoggingOut(true)
+    try {
+      // Call logout action (clears server-side cookies)
+      await logoutAction()
+      
+      // Always clear client-side token
       apiClient.clearToken()
+      console.log('✅ Logged out successfully')
+      
       toast.success('Logged out successfully')
+      
+      // Redirect to login
       router.push('/login')
       router.refresh()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Even on error, clear token and redirect
+      apiClient.clearToken()
+      router.push('/login')
+      router.refresh()
+    } finally {
+      setIsLoggingOut(false)
     }
   }
 
@@ -139,13 +158,14 @@ export function Sidebar() {
           <div className="border-t p-4">
             <button
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
                 isCollapsed && "justify-center"
               )}
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span>Logout</span>}
+              {!isCollapsed && <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>}
             </button>
           </div>
         </div>

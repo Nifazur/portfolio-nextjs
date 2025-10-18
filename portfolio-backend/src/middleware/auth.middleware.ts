@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
@@ -19,7 +20,16 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+    const token = 
+      req.cookies?.token || 
+      req.headers.authorization?.replace('Bearer ', '') ||
+      req.headers.authorization;
+
+    console.log('🔐 Auth Check:', {
+      hasCookie: !!req.cookies?.token,
+      hasHeader: !!req.headers.authorization,
+      token: token ? `${token.substring(0, 20)}...` : 'none'
+    });
 
     if (!token) {
       throw new ApiError(401, 'Authentication required');
@@ -56,7 +66,6 @@ export const authenticate = async (
     }
     next(error);
   }
-  
 };
 
 export const authorizeOwner = (req: AuthRequest, _res: Response, next: NextFunction) => {

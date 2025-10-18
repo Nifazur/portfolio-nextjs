@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -7,7 +8,7 @@ import { Menu, X, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { site } from '@/lib/constants'
-import Cookies from 'js-cookie'
+import { apiClient } from '@/lib/api'
 
 const navItems = [
   { name: 'Home', href: '/#hero', section: 'hero' },
@@ -23,19 +24,42 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('hero')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const pathname = usePathname()
 
   // Check authentication status
   useEffect(() => {
-    const checkAuth = () => {
-      const token = Cookies.get('token')
-      setIsAuthenticated(!!token)
+    const checkAuth = async () => {
+      setIsCheckingAuth(true)
+      
+      // First check if token exists in localStorage
+      const token = apiClient.getToken()
+      
+      if (!token) {
+        setIsAuthenticated(false)
+        setIsCheckingAuth(false)
+        return
+      }
+      
+      // Verify token by calling profile API
+      try {
+        const response = await apiClient.get('/auth/profile')
+        setIsAuthenticated(true)
+        console.log('✅ User authenticated')
+      } catch (error) {
+        console.log('❌ Authentication failed:', error)
+        setIsAuthenticated(false)
+        // Clear invalid token
+        apiClient.clearToken()
+      } finally {
+        setIsCheckingAuth(false)
+      }
     }
     
     checkAuth()
     
-    // Check periodically for auth changes
-    const interval = setInterval(checkAuth, 1000)
+    // Check auth status every 60 seconds
+    const interval = setInterval(checkAuth, 60000)
     return () => clearInterval(interval)
   }, [])
 
@@ -147,7 +171,7 @@ export function Navbar() {
             ))}
             
             {/* Dashboard Link - Only show when authenticated */}
-            {isAuthenticated && (
+            {!isCheckingAuth && isAuthenticated && (
               <Link
                 href="/dashboard"
                 className={cn(
@@ -204,7 +228,7 @@ export function Navbar() {
             ))}
             
             {/* Dashboard Link - Mobile - Only show when authenticated */}
-            {isAuthenticated && (
+            {!isCheckingAuth && isAuthenticated && (
               <Link
                 href="/dashboard"
                 onClick={() => setIsMenuOpen(false)}

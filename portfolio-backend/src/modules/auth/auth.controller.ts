@@ -8,29 +8,34 @@ export class AuthController {
   static login = asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = await AuthService.login(req.body);
 
-    // Set httpOnly cookies
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Set httpOnly cookie for server-side auth
     res.cookie('token', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-origin in production
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
     });
 
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/',
     });
 
+    // ALSO return tokens in response body for client-side storage
     res.status(200).json(
       new ApiResponse(200, result, 'Login successful')
     );
   });
 
   static logout = asyncHandler(async (_req: AuthRequest, res: Response) => {
-    res.clearCookie('token');
-    res.clearCookie('refreshToken');
+    res.clearCookie('token', { path: '/' });
+    res.clearCookie('refreshToken', { path: '/' });
 
     res.status(200).json(
       new ApiResponse(200, null, 'Logout successful')
@@ -42,11 +47,14 @@ export class AuthController {
 
     const result = await AuthService.refreshToken(refreshToken);
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     res.cookie('token', result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
     });
 
     res.status(200).json(

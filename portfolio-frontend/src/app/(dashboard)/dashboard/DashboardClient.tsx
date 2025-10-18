@@ -110,7 +110,7 @@ export default function DashboardClient({
       value: data.stats.blogs.totalViews || 0,
       description: 'Blog views',
       icon: Eye,
-      href: '/dashboard/analytics',
+      href: '/dashboard',
       color: 'text-orange-500'
     }
   ]

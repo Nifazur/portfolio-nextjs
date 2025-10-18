@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -44,8 +44,11 @@ export default function LoginForm() {
       const result = await loginAction(data)
       
       if (result.success && result.data) {
-        // Set token in client-side api client
-        apiClient.setToken(result.data.accessToken)
+        // Store token in localStorage (backup for httpOnly cookie)
+        if (result.data.accessToken) {
+          apiClient.setToken(result.data.accessToken)
+          console.log('✅ Token saved to localStorage')
+        }
         
         toast.success('Login successful!')
         router.push(from)
@@ -54,6 +57,7 @@ export default function LoginForm() {
         setError(result.message || 'Login failed')
       }
     } catch (error) {
+      console.error('Login error:', error)
       setError('An unexpected error occurred')
     } finally {
       setIsLoading(false)

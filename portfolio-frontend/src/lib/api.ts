@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiResponse, ApiError } from '@/types'
-import Cookies from 'js-cookie'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+const TOKEN_KEY = 'auth_token'
 
 export class ApiClient {
   private static instance: ApiClient
@@ -21,21 +21,33 @@ export class ApiClient {
 
   private loadToken() {
     if (typeof window !== 'undefined') {
-      this.token = Cookies.get('token') || null
+      try {
+        this.token = localStorage.getItem(TOKEN_KEY)
+      } catch (error) {
+        console.warn('Failed to load token from localStorage:', error)
+      }
     }
   }
 
   setToken(token: string) {
     this.token = token
     if (typeof window !== 'undefined') {
-      Cookies.set('token', token, { expires: 7 })
+      try {
+        localStorage.setItem(TOKEN_KEY, token)
+      } catch (error) {
+        console.warn('Failed to save token to localStorage:', error)
+      }
     }
   }
 
   clearToken() {
     this.token = null
     if (typeof window !== 'undefined') {
-      Cookies.remove('token')
+      try {
+        localStorage.removeItem(TOKEN_KEY)
+      } catch (error) {
+        console.warn('Failed to remove token from localStorage:', error)
+      }
     }
   }
 
@@ -52,6 +64,7 @@ export class ApiClient {
       ...options.headers,
     }
 
+    // Add Authorization header if token exists
     if (this.token) {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`
     }
@@ -60,12 +73,17 @@ export class ApiClient {
       const response = await fetch(`${API_URL}${url}`, {
         ...options,
         headers,
-        credentials: 'include',
+        credentials: 'include', // Always send cookies
       })
 
       const data = await response.json()
 
       if (!response.ok) {
+        // If 401, clear token
+        if (response.status === 401) {
+          this.clearToken()
+        }
+        
         throw {
           success: false,
           statusCode: response.status,
